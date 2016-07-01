@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Live Template Editor</title>
+    <script type="text/javascript" src="https://code.jquery.com/jquery-3.0.0.min.js"></script>
+    <script type="text/javascript" src="lib/knockout-3.4.0.js"></script>
+    <script type="text/javascript" src="js/ko-binding.js"></script>
+
+    <style type="text/css">
+      body { margin: 20px; solid #888; text-align: center; color: #333; font-family: Comic Sans, Comic Sans MS, cursive; font-weight: bold; }
+      h1 { color: #8AF; }
+    </style>
+
+  </head>
+
+<!-- ~=~=~=~= Live Template editor Templates ~=~=~=~=~= -->
+<script type="text/template" id="dynamic-tmpl">
+  <!-- Editors section, side-by-side template html and viewmodel json editors -->
+  <table border="0" width="100%">
+    <tr>
+      <!-- template html editor -->
+      <td style="width: 50%; text-align: right; padding: 5px; padding-right: 25px;" valign="top">
+        <h1>Template</h1>
+        <textarea rows="10" cols="80" ko-textInput="templateSource" style="height: 200px; background-color: white; box-shadow: inset 0 0 50px rgb(240,220,220);"></textarea>
+      </td>
+      <!-- Separator cell
+      <td width="1px" style="background-color: #DDD;"></td> -->
+
+      <td style="border-left: 2px solid #ddd; width: 50%; text-align: left; padding: 5px; padding-left: 25px;" valign="top">
+        <h1>ViewModel</h1>
+        <textarea rows="20" cols="80" ko-textInput="viewModelSource" style="height: 200px; background-color: white;  box-shadow: inset 0 0 50px rgb(220,220,240);"></textarea>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Live view section, button toggles rendering the live view -->
+  <h1>Live View <button ko-text="liveView() ? 'Off' : 'On'" ko-click="toggleLiveView" style="font-size: 9pt;"></button></h1>
+  <!-- ko if:liveView -->
+  <div ko-template="{ name: 'dynamic-inner-tmpl' }"
+    style="width: 800px; min-height: 200px; margin-left: auto; margin-right: auto; border: 1px solid #888; border-radius: 5px; box-shadow: inset 0 0 50px rgb(220,240,240);"></div>
+  <!-- /ko -->
+</script>
+
+<!-- Template to display the bound template nodes from source -->
+<script type="text/template" id="dynamic-inner-tmpl">
+  <div ko-with="templateNodes()">
+    <!-- ko if: $data.error -->
+    <h3 style="color:red;" ko-text="error"></h3>
+    <!-- /ko -->
+
+    <!-- Render bound source template with bound view model json -->
+    <div ko-template="{ nodes: $data, data: $parent.viewModelJs() }"></div>
+  </div>
+</script>
+
+<script type="text/javascript">
+  var DynamicTemplateVM = function() {
+    var self = this;
+    self.templateSource = ko.observable(initTemplate.join('\n'));
+    self.viewModelSource = ko.observable(JSON.stringify(initViewModel, null, 4));
+    self.templateNodes = ko.computed(function() {
+      var src = self.templateSource();
+      return $.parseHTML(src);
+    }).extend({ rateLimit: 500 });
+    self.viewModelJs = ko.computed(function() {
+      var jsSource = self.viewModelSource();
+      var jsResult = { error: 'Invalid view model'};
+      try {
+        jsResult = JSON.parse(jsSource);
+      } catch (e) { }
+      return jsResult;
+    }).extend({ rateLimit: 500 });
+    self.liveView = ko.observable(true);
+    self.toggleLiveView = function() {
+      self.liveView( ! self.liveView.peek() );
+    };
+  };
+
+</script>
+</head>
+<body>
+  <!-- Live Editor Bound root element -->
+  <div id="test-box">
+    <div ko-template="{ name: 'dynamic-tmpl' }"></div>
+  </div>
+
+ <script type="text/javascript">
+ var initTemplate = [
+ '<br/><br/><br/><br/><br/>',
+ '',
+ '<div ko-foreach="[1,2,3,4,5]">',
+ '  <div ko-style="{borderBottom: $data == 5 ? \'1px solid blue\' : \'none\',',
+ '    borderTop: $data == 1 ? \'1px solid blue\' : \'none\'',
+ '  }">',
+ '    <span ko-text="$data"></span>',
+ '    <span ko-text="$parent.prefix"></span>',
+ '    <span ko-text="$parent.look[$data]"></span>',
+ '  </div>',
+ '</div>',
+ '',
+ '<br/><br/><br/><br/>'
+ ];
+ var initViewModel = {"prefix":"Question ",
+  "look": { "1": "One thing","2": "Two thing","3": "One thing","4": "One thing","5": "Last thing"}
+
+  };
+ </script>
+
+
+  <!-- Init LiveEditor viewmodel and apply bindings -->
+  <script type="text/javascript">
+    var dynamicVM = new DynamicTemplateVM();
+    ko.applyBindings(dynamicVM, document.getElementById('test-box'));
+  </script>
+
+</body>
+</html>
